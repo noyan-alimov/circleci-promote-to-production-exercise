@@ -1,0 +1,73 @@
+version: 2.1
+
+jobs:
+    create_and_deploy_front_end:
+        docker:
+            - image: amazon/awscli
+        steps:
+            - checkout
+            - run:
+                name: Create and deploy front end
+                command: |
+                    aws cloudformation deploy \
+                        --template-file bucket.yml \
+                        --stack-name "${CIRCLE_WORKFLOW_ID:0:7}" \
+                        --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID:0:7}"
+            - run: aws s3 sync . s3://"${CIRCLE_WORKFLOW_ID:0:7}" --delete
+
+    get_last_deployment_id:
+        docker:
+            - image: amazon/awscli
+        steps:
+            - checkout
+            - run:
+                name: Query and save last deployment id
+                command: |
+                    mkdir /tmp/workspace
+                    ID=$(aws cloudformation \
+                        list-exports --query "Exports[?Name==\`PipelineID\`].Value" \
+                        --no-paginate --output text)
+                    echo ID > /tmp/workspace/last_deployment_id.txt
+            - persist_to_workspace:
+                root: /tmp/workspace
+                paths:
+                    - last_deployment_id.txt
+
+    promote_to_production:
+        docker:
+            - image: amazon/awscli
+        steps:
+            - checkout
+            - run:
+                name: Promote to production
+                command: |
+                    aws cloudformation deploy \
+                        --template-file cloudfront.yml \
+                        --stack-name production-distro \
+                        --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID:0:7}"
+
+    clean_up_old_front_end:
+        docker:
+            - image: amazon/awscli
+        steps:
+            - checkout
+            - attach_workspace:
+                at: /tmp/workspace
+            - run:
+                name: Delete old front end
+                command: |
+                    OldPipelineID=$(cat /tmp/workspace/last_deployment_id.txt)
+                    aws s3 rm "s3://${OldPipelineID}" --recursive
+                    aws cloudformation delete-stack --stack-name "${OldPipelineID}"
+
+
+workflows:
+    default:
+        - create_and_deploy_front_end
+        - get_last_deployment_id
+        - promote_to_production:
+            requires:
+                - create_and_deploy_front_end
+        - clean_up_old_front_end:
+            requires:
+                - promote_to_production
