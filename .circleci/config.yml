@@ -62,7 +62,7 @@ jobs:
                 name: Delete old front end
                 command: |
                     OldPipelineID=$(cat /tmp/workspace/last_deployment_id.txt)
-                    echo "OldPipelineID"
+                    echo OldPipelineID
                     aws s3 rm s3://${OldPipelineID} --recursive
                     aws cloudformation delete-stack --stack-name "promote-${OldPipelineID}"
 
