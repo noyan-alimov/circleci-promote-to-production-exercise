@@ -51,9 +51,11 @@ jobs:
 
     clean_up_old_front_end:
         docker:
-            - image: amazon/aws-cli
+            - image: alpine:latest
         steps:
             - checkout
+            - run: apk add aws-cli
+            - run: apk add tar
             - attach_workspace:
                 at: /tmp/workspace
             - run:
@@ -61,7 +63,7 @@ jobs:
                 command: |
                     OldPipelineID=$(cat /tmp/workspace/last_deployment_id.txt)
                     aws s3 rm "s3://${OldPipelineID}" --recursive
-                    aws cloudformation delete-stack --stack-name "${OldPipelineID}"
+                    
 
 
 workflows:
