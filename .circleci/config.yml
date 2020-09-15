@@ -21,8 +21,8 @@ jobs:
             - image: alpine:latest
         steps:
             - checkout
-            - apk add aws-cli
-            - apk add tar
+            - run: apk add aws-cli
+            - run: apk add tar
             - run:
                 name: Query and save last deployment id
                 command: |
