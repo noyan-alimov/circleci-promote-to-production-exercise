@@ -30,7 +30,7 @@ jobs:
                     ID=$(aws cloudformation \
                         list-exports --query "Exports[?Name==\`PipelineID\`].Value" \
                         --no-paginate --output text)
-                    echo ID > /tmp/workspace/last_deployment_id.txt
+                    echo ${ID} > /tmp/workspace/last_deployment_id.txt
             - persist_to_workspace:
                 root: /tmp/workspace
                 paths:
@@ -64,7 +64,7 @@ jobs:
                     OldPipelineID=$(cat /tmp/workspace/last_deployment_id.txt)
                     echo ${OldPipelineID}
                     aws s3 rm s3://${OldPipelineID} --recursive
-                    aws cloudformation delete-stack --stack-name promote-${OldPipelineID}
+                    aws cloudformation delete-stack --stack-name "promote-${OldPipelineID}"
 
 
 workflows:
